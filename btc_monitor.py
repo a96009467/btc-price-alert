@@ -24,23 +24,18 @@ MAX_HISTORY_MINUTES = 15
 
 
 def get_btc_data():
-    """CoinGecko API 取得 BTC 即時價格 + 24hr 統計"""
-    url = "https://api.coingecko.com/api/v3/simple/price"
-    params = {
-        "ids": "bitcoin",
-        "vs_currencies": "usd",
-        "include_24hr_change": "true",
-        "include_24hr_high_low": "true",
-    }
+    """從幣安公共 API 取得 BTC 即時價格"""
+    url = "https://data-api.binance.vision/api/v3/ticker/24hr"
+    params = {"symbol": "BTCUSDT"}
     try:
         resp = requests.get(url, params=params, timeout=15)
         resp.raise_for_status()
-        data = resp.json()["bitcoin"]
+        data = resp.json()
         return {
-            "price": float(data["usd"]),
-            "change_24h": float(data.get("usd_24h_change", 0)),
-            "high_24h": float(data.get("usd_24h_high", 0)),
-            "low_24h": float(data.get("usd_24h_low", 0)),
+            "price": float(data["lastPrice"]),
+            "change_24h": float(data["priceChangePercent"]),
+            "high_24h": float(data["highPrice"]),
+            "low_24h": float(data["lowPrice"]),
         }
     except Exception as e:
         print(f"[錯誤] 取得 BTC 資料失敗: {e}")
@@ -216,7 +211,9 @@ def main():
         send_bark(
             f"{arrow} BTC 日報 {today}",
             f"目前: ${current_price:,.2f}\n"
-            f"24h 漲跌: {data['change_24h']:+.2f}%",
+            f"24h 漲跌: {data['change_24h']:+.2f}%\n"
+            f"24h 最高: ${data['high_24h']:,.2f}\n"
+            f"24h 最低: ${data['low_24h']:,.2f}",
             group="BTC日報", sound="calendar"
         )
         state["last_report_date"] = today
