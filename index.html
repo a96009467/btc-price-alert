@@ -115,9 +115,9 @@
             try {
                 let url;
                 if (currentExchange === 'binance') {
-                    url = 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT';
+                    url = 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDC';
                 } else {
-                    url = 'https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT';
+                    url = 'https://www.okx.com/api/v5/market/ticker?instId=BTC-USDC';
                 }
                 const resp = await fetch(url);
                 const data = await resp.json();
