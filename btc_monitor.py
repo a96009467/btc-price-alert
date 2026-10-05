@@ -203,7 +203,7 @@ def get_okx_price():
     """額外取得歐易價格，供通知對比用"""
     try:
         url = "https://www.okx.com/api/v5/market/ticker"
-        resp = requests.get(url, params={"instId": "BTC-USDT"}, timeout=8)
+        resp = requests.get(url, params={"instId": "BTC-USDC"}, timeout=8)
         resp.raise_for_status()
         return float(resp.json()["data"][0]["last"])
     except:
