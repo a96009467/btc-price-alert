@@ -24,11 +24,11 @@ MAX_HISTORY_MINUTES = 15
 
 
 def get_btc_data():
-    """從幣安公共 API 取得 BTC 即時價格"""
-    url = "https://data-api.binance.vision/api/v3/ticker/24hr"
-    params = {"symbol": "BTCUSDT"}
+    """取得 BTC 即時價格，自動備援：幣安 → CoinGecko"""
+    # 第一順位：幣安公共行情端點
     try:
-        resp = requests.get(url, params=params, timeout=15)
+        url = "https://data-api.binance.vision/api/v3/ticker/24hr"
+        resp = requests.get(url, params={"symbol": "BTCUSDT"}, timeout=10)
         resp.raise_for_status()
         data = resp.json()
         return {
@@ -36,9 +36,31 @@ def get_btc_data():
             "change_24h": float(data["priceChangePercent"]),
             "high_24h": float(data["highPrice"]),
             "low_24h": float(data["lowPrice"]),
+            "source": "幣安"
         }
     except Exception as e:
-        print(f"[錯誤] 取得 BTC 資料失敗: {e}")
+        print(f"[警告] 幣安接口失敗，切換 CoinGecko: {e}")
+
+    # 第二順位：CoinGecko 備援
+    try:
+        url = "https://api.coingecko.com/api/v3/simple/price"
+        params = {
+            "ids": "bitcoin",
+            "vs_currencies": "usd",
+            "include_24hr_change": "true",
+        }
+        resp = requests.get(url, params=params, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()["bitcoin"]
+        return {
+            "price": float(data["usd"]),
+            "change_24h": float(data.get("usd_24h_change", 0)),
+            "high_24h": 0,
+            "low_24h": 0,
+            "source": "CoinGecko"
+        }
+    except Exception as e:
+        print(f"[錯誤] CoinGecko 也失敗: {e}")
         return None
 
 
