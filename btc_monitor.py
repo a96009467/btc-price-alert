@@ -2,6 +2,7 @@ import os
 import json
 import math
 import requests
+from urllib.parse import quote
 from datetime import datetime, timezone, timedelta
 
 # ============ 配置 ============
@@ -66,7 +67,8 @@ def send_bark(title, body, group="BTC行情", sound="default", level="active"):
     if not BARK_KEY:
         print("[警告] 未設定 BARK_KEY，跳過推送")
         return False
-    url = f"{BARK_SERVER}/{BARK_KEY}/{title}/{body}"
+    # URL 編碼 title 和 body，避免換行/特殊字元導致網址錯誤
+    url = f"{BARK_SERVER}/{BARK_KEY}/{quote(title)}/{quote(body)}"
     params = {
         "group": group,
         "sound": sound,
@@ -214,9 +216,7 @@ def main():
         send_bark(
             f"{arrow} BTC 日報 {today}",
             f"目前: ${current_price:,.2f}\n"
-            f"24h 漲跌: {data['change_24h']:+.2f}%\n"
-            f"24h 最高: ${data['high_24h']:,.2f}\n"
-            f"24h 最低: ${data['low_24h']:,.2f}",
+            f"24h 漲跌: {data['change_24h']:+.2f}%",
             group="BTC日報", sound="calendar"
         )
         state["last_report_date"] = today
