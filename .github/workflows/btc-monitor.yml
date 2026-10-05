@@ -1,9 +1,9 @@
 name: BTC 價格監控
 
-# 定时任务：每分钟运行一次
+# 定时任务：每3分钟运行一次（降低频率，更容易被GitHub调度）
 on:
   schedule:
-    - cron: "* * * * *"
+    - cron: "*/3 * * * *"
   workflow_dispatch:
 
 permissions:
