@@ -26,7 +26,6 @@ jobs:
       - name: 執行 BTC 價格監控
         env:
           BARK_KEY: ${{ secrets.BARK_KEY }}
-          BARK_SERVER: ${{ secrets.BARK_SERVER }}
         run: python btc_monitor.py
 
       - name: 將最新狀態推回倉庫
