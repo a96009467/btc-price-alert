@@ -78,20 +78,21 @@ def save_state(state):
         json.dump(state, f, ensure_ascii=False, indent=2)
 
 
-def send_bark(title, body, group="BTC行情", sound="default", level="active"):
+def send_bark(title, body, group="BTC行情", sound="default", level="active", url=""):
     if not BARK_KEY:
         print("[警告] 未設定 BARK_KEY，跳過推送")
         return False
-    # URL 編碼 title 和 body，避免換行/特殊字元導致網址錯誤
-    url = f"{BARK_SERVER}/{BARK_KEY}/{quote(title)}/{quote(body)}"
+    url_path = f"{BARK_SERVER}/{BARK_KEY}/{quote(title)}/{quote(body)}"
     params = {
         "group": group,
         "sound": sound,
         "level": level,
         "ttl": 600,
     }
+    if url:
+        params["url"] = url
     try:
-        resp = requests.get(url, params=params, timeout=10)
+        resp = requests.get(url_path, params=params, timeout=10)
         result = resp.json()
         if result.get("code") == 200:
             print(f"[推送成功] {title}")
@@ -122,19 +123,26 @@ def find_price_ago(history, minutes):
     return best_price
 
 
-def check_window_alerts(current_price, history):
+def check_window_alerts(current_price, history, okx_price=None):
     """短線窗口波動警報"""
     alerts = []
+    kline_url = "https://www.binance.com/zh-TC/trade/BTC_USDT"
+    price_line = f"幣安: ${current_price:,.2f}"
+    if okx_price:
+        price_line += f"\n歐易: ${okx_price:,.2f}"
 
-    # 3分鐘：只偵測上漲 $200
+    # 3分鐘：漲跌 $200
     p3 = find_price_ago(history, 3)
     if p3 is not None:
         chg = current_price - p3
-        if chg >= WINDOW_3MIN_UP:
+        if abs(chg) >= WINDOW_3MIN_UP:
+            arrow = "⚡" if chg >= 0 else "🔻"
+            direction = "急漲" if chg >= 0 else "急跌"
             alerts.append({
-                "title": f"⚡ 3分鐘急漲 +${chg:,.0f}",
-                "body": f"3分鐘前: ${p3:,.2f}\n現在: ${current_price:,.2f}\n漲幅: +${chg:,.2f}",
-                "sound": "alarm", "level": "timeSensitive", "group": "短線急漲"
+                "title": f"{arrow} 3分鐘{direction} ${abs(chg):,.0f}",
+                "body": f"3分鐘前: ${p3:,.2f}\n{price_line}\n變動: {chg:+,.2f}",
+                "sound": "alarm", "level": "timeSensitive", "group": "3分鐘波動",
+                "url": kline_url
             })
 
     # 5分鐘：漲跌 $300
@@ -146,8 +154,9 @@ def check_window_alerts(current_price, history):
             direction = "急漲" if chg >= 0 else "急跌"
             alerts.append({
                 "title": f"{arrow} 5分鐘{direction} ${abs(chg):,.0f}",
-                "body": f"5分鐘前: ${p5:,.2f}\n現在: ${current_price:,.2f}\n變動: {chg:+,.2f}",
-                "sound": "glass", "level": "active", "group": "5分鐘波動"
+                "body": f"5分鐘前: ${p5:,.2f}\n{price_line}\n變動: {chg:+,.2f}",
+                "sound": "glass", "level": "active", "group": "5分鐘波動",
+                "url": kline_url
             })
 
     # 10分鐘：漲跌 $500
@@ -159,8 +168,9 @@ def check_window_alerts(current_price, history):
             direction = "大漲" if chg >= 0 else "大跌"
             alerts.append({
                 "title": f"{arrow} 10分鐘{direction} ${abs(chg):,.0f}",
-                "body": f"10分鐘前: ${p10:,.2f}\n現在: ${current_price:,.2f}\n變動: {chg:+,.2f}",
-                "sound": "horn", "level": "timeSensitive", "group": "10分鐘波動"
+                "body": f"10分鐘前: ${p10:,.2f}\n{price_line}\n變動: {chg:+,.2f}",
+                "sound": "horn", "level": "timeSensitive", "group": "10分鐘波動",
+                "url": kline_url
             })
 
     return alerts
@@ -176,6 +186,17 @@ def check_level_break(current_price, last_level):
     return None, current_level
 
 
+def get_okx_price():
+    """額外取得歐易價格，供通知對比用"""
+    try:
+        url = "https://www.okx.com/api/v5/market/ticker"
+        resp = requests.get(url, params={"instId": "BTC-USDT"}, timeout=8)
+        resp.raise_for_status()
+        return float(resp.json()["data"][0]["last"])
+    except:
+        return None
+
+
 def main():
     now = datetime.now(TZ)
     print("=" * 40)
@@ -185,15 +206,22 @@ def main():
     if data is None:
         return
     current_price = data["price"]
-    print(f"[目前] ${current_price:,.2f}")
+    print(f"[目前] ${current_price:,.2f} ({data.get('source', '')})")
+
+    # 額外取歐易價格做對比
+    okx_price = get_okx_price()
+    if okx_price:
+        print(f"[歐易] ${okx_price:,.2f}")
 
     state = load_state()
     history = state.get("price_history", [])
 
     # 短線窗口警報
-    for alert in check_window_alerts(current_price, history):
+    kline_url = "https://www.binance.com/zh-TC/trade/BTC_USDT"
+    for alert in check_window_alerts(current_price, history, okx_price):
         send_bark(alert["title"], alert["body"],
-                  group=alert["group"], sound=alert["sound"], level=alert["level"])
+                  group=alert["group"], sound=alert["sound"], level=alert["level"],
+                  url=alert.get("url", kline_url))
 
     # 更新歷史
     history.append({"price": current_price, "time": now.isoformat()})
@@ -210,9 +238,11 @@ def main():
         send_bark(
             "✅ BTC監控已啟動",
             f"目前價格: ${current_price:,.2f}\n"
-            f"3分鐘急漲門檻: +${WINDOW_3MIN_UP:.0f}\n"
+            f"數據來源: {data.get('source', '幣安')}\n"
+            f"3分鐘波動門檻: ±${WINDOW_3MIN_UP:.0f}\n"
             f"5分鐘波動門檻: ±${WINDOW_5MIN_CHG:.0f}\n"
-            f"10分鐘波動門檻: ±${WINDOW_10MIN_CHG:.0f}"
+            f"10分鐘波動門檻: ±${WINDOW_10MIN_CHG:.0f}",
+            url=kline_url
         )
         return
 
@@ -221,7 +251,7 @@ def main():
     level_msg, new_level = check_level_break(current_price, last_level)
     if level_msg:
         send_bark(f"🎯 {level_msg}", f"目前: ${current_price:,.2f}",
-                  group="關卡突破", sound="horn")
+                  group="關卡突破", sound="horn", url=kline_url)
     state["last_level"] = new_level
 
     # 每日簡報
