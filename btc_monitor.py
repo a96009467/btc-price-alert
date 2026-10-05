@@ -28,7 +28,7 @@ def get_btc_data():
     # 第一順位：幣安公共行情端點
     try:
         url = "https://data-api.binance.vision/api/v3/ticker/24hr"
-        resp = requests.get(url, params={"symbol": "BTCUSDT"}, timeout=10)
+        resp = requests.get(url, params={"symbol": "BTCUSDC"}, timeout=10)
         resp.raise_for_status()
         data = resp.json()
         return {
