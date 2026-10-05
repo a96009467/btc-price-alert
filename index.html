@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC 即時K線圖</title>
+    <title>BTC 即时K线图</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -20,10 +20,38 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
         }
         .header h1 {
             font-size: 18px;
             font-weight: 600;
+        }
+        .exchange-switch {
+            display: flex;
+            background: #2a2e39;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .exchange-btn {
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: #787b86;
+            transition: all 0.2s;
+        }
+        .exchange-btn.active {
+            background: #2962ff;
+            color: white;
         }
         .price {
             font-size: 24px;
@@ -45,39 +73,78 @@
 </head>
 <body>
     <div class="header">
-        <h1>📈 BTC/USDT 即時走勢</h1>
-        <div class="price" id="price">載入中...</div>
+        <div class="header-left">
+            <h1>📈 BTC/USDT 即时走势</h1>
+            <div class="exchange-switch">
+                <button class="exchange-btn active" data-exchange="binance" onclick="switchExchange('binance')">币安</button>
+                <button class="exchange-btn" data-exchange="okx" onclick="switchExchange('okx')">欧易</button>
+            </div>
+        </div>
+        <div class="price" id="price">载入中...</div>
     </div>
     <div class="widget-container">
         <div class="tradingview-widget-container">
             <div id="tradingview_chart" style="height:100%; width:100%;"></div>
             <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-            <script type="text/javascript">
-                new TradingView.widget({
-                    "autosize": true,
-                    "symbol": "BINANCE:BTCUSDT",
-                    "interval": "5",
-                    "timezone": "Asia/Taipei",
-                    "theme": "dark",
-                    "style": "1",
-                    "locale": "zh_TW",
-                    "toolbar_bg": "#1e222d",
-                    "enable_publishing": false,
-                    "allow_symbol_change": false,
-                    "container_id": "tradingview_chart"
-                });
-            </script>
         </div>
     </div>
     <script>
-        // 每10秒更新一次頂部價格
+        let currentExchange = 'binance';
+        let widget = null;
+
+        function loadChart(exchange) {
+            const symbol = exchange === 'binance' ? 'BINANCE:BTCUSDT' : 'OKX:BTC-USDT';
+            document.getElementById('tradingview_chart').innerHTML = '';
+            
+            widget = new TradingView.widget({
+                "autosize": true,
+                "symbol": symbol,
+                "interval": "5",
+                "timezone": "Asia/Taipei",
+                "theme": "dark",
+                "style": "1",
+                "locale": "zh_CN",
+                "toolbar_bg": "#1e222d",
+                "enable_publishing": false,
+                "allow_symbol_change": false,
+                "container_id": "tradingview_chart"
+            });
+        }
+
         async function updatePrice() {
             try {
-                const resp = await fetch('https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT');
+                let url;
+                if (currentExchange === 'binance') {
+                    url = 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT';
+                } else {
+                    url = 'https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT';
+                }
+                const resp = await fetch(url);
                 const data = await resp.json();
-                document.getElementById('price').textContent = '$' + parseFloat(data.price).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+                let price;
+                if (currentExchange === 'binance') {
+                    price = data.price;
+                } else {
+                    price = data.data[0].last;
+                }
+                document.getElementById('price').textContent = '$' + parseFloat(price).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
             } catch(e) {}
         }
+
+        function switchExchange(exchange) {
+            if (exchange === currentExchange) return;
+            currentExchange = exchange;
+            
+            document.querySelectorAll('.exchange-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.exchange === exchange);
+            });
+            
+            loadChart(exchange);
+            updatePrice();
+        }
+
+        // 初始化
+        loadChart('binance');
         updatePrice();
         setInterval(updatePrice, 10000);
     </script>
