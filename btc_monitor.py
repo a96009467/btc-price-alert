@@ -128,7 +128,7 @@ def find_price_ago(history, minutes, exchange="binance"):
 def check_window_alerts(binance_price, okx_price, history):
     """短線窗口波動警報，以幣安為主判斷觸發，通知顯示兩邊變動"""
     alerts = []
-    kline_url = "https://www.binance.com/zh-TC/trade/BTC_USDT"
+    kline_url = "https://a96009467.github.io/btc-price-alert/"
 
     def build_body(past_binance, now_binance, now_okx, past_label):
         """建置通知內容，分別顯示兩交易所變動"""
@@ -230,7 +230,7 @@ def main():
     history = state.get("price_history", [])
 
     # 短線窗口警報
-    kline_url = "https://www.binance.com/zh-TC/trade/BTC_USDT"
+    kline_url = "https://a96009467.github.io/btc-price-alert/"
     for alert in check_window_alerts(current_price, okx_price, history):
         send_bark(alert["title"], alert["body"],
                   group=alert["group"], sound=alert["sound"], level=alert["level"],
