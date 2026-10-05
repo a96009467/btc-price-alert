@@ -41,26 +41,24 @@ def get_btc_data():
     except Exception as e:
         print(f"[警告] 幣安接口失敗，切換 CoinGecko: {e}")
 
-    # 第二順位：CoinGecko 備援
+    # 第二順位：歐易 OKX 備援
     try:
-        url = "https://api.coingecko.com/api/v3/simple/price"
-        params = {
-            "ids": "bitcoin",
-            "vs_currencies": "usd",
-            "include_24hr_change": "true",
-        }
+        url = "https://www.okx.com/api/v5/market/ticker"
+        params = {"instId": "BTC-USDT"}
         resp = requests.get(url, params=params, timeout=15)
         resp.raise_for_status()
-        data = resp.json()["bitcoin"]
+        data = resp.json()["data"][0]
+        open_price = float(data["open24h"])
+        current = float(data["last"])
         return {
-            "price": float(data["usd"]),
-            "change_24h": float(data.get("usd_24h_change", 0)),
-            "high_24h": 0,
-            "low_24h": 0,
-            "source": "CoinGecko"
+            "price": current,
+            "change_24h": ((current - open_price) / open_price) * 100,
+            "high_24h": float(data["high24h"]),
+            "low_24h": float(data["low24h"]),
+            "source": "歐易OKX"
         }
     except Exception as e:
-        print(f"[錯誤] CoinGecko 也失敗: {e}")
+        print(f"[錯誤] 歐易也失敗: {e}")
         return None
 
 
