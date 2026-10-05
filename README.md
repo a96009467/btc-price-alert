@@ -48,7 +48,7 @@
 
 | Name | Value | 說明 |
 |------|-------|------|
-| `BARK_KEY` | `7MVvbHFdXZ4X4u9nEuNrmE` | 你的 Bark 裝置金鑰 |
+| `BARK_KEY` | `你的Bark金鑰` | 從你的 Bark App 裡複製那串 Key |
 
 > 你也可以新增選項的 Secret：
 > - `BARK_SERVER`：如果你有自架 Bark 伺服器才需要填，預設是 `https://api.day.app`
