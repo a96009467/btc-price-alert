@@ -1,5 +1,6 @@
 name: BTC 價格監控
 
+# 定时任务：每分钟运行一次
 on:
   schedule:
     - cron: "* * * * *"
