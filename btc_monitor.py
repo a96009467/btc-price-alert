@@ -104,7 +104,7 @@ def send_bark(title, body, group="BTC行情", sound="default", level="active", u
         return False
 
 
-def find_price_ago(history, minutes):
+def find_price_ago(history, minutes, exchange="binance"):
     """從歷史中找 N 分鐘前最接近的價格"""
     if not history:
         return None
@@ -113,62 +113,75 @@ def find_price_ago(history, minutes):
     best_price = None
     best_diff = timedelta(hours=999)
     for h in history:
+        if exchange not in h or h[exchange] is None:
+            continue
         t = datetime.fromisoformat(h["time"])
         d = abs(t - target)
         if d < best_diff:
             best_diff = d
-            best_price = h["price"]
+            best_price = h[exchange]
     if best_diff > timedelta(minutes=minutes * 0.6 + 1):
         return None
     return best_price
 
 
-def check_window_alerts(current_price, history, okx_price=None):
-    """短線窗口波動警報"""
+def check_window_alerts(binance_price, okx_price, history):
+    """短線窗口波動警報，以幣安為主判斷觸發，通知顯示兩邊變動"""
     alerts = []
     kline_url = "https://www.binance.com/zh-TC/trade/BTC_USDT"
-    price_line = f"幣安: ${current_price:,.2f}"
-    if okx_price:
-        price_line += f"\n歐易: ${okx_price:,.2f}"
 
-    # 3分鐘：漲跌 $200
-    p3 = find_price_ago(history, 3)
-    if p3 is not None:
-        chg = current_price - p3
+    def build_body(past_binance, now_binance, now_okx, past_label):
+        """建置通知內容，分別顯示兩交易所變動"""
+        bn_chg = now_binance - past_binance
+        lines = [f"{past_label}: ${past_binance:,.2f}"]
+        lines.append(f"幣安: ${now_binance:,.2f}  ({bn_chg:+,.0f})")
+        if now_okx:
+            past_okx = find_price_ago(history, 3, "okx")  # 近似值
+            if past_okx:
+                okx_chg = now_okx - past_okx
+                lines.append(f"歐易: ${now_okx:,.2f}  ({okx_chg:+,.0f})")
+            else:
+                lines.append(f"歐易: ${now_okx:,.2f}")
+        return "\n".join(lines)
+
+    # 3分鐘：漲跌 $200（以幣安為基準）
+    p3_binance = find_price_ago(history, 3, "binance")
+    if p3_binance is not None:
+        chg = binance_price - p3_binance
         if abs(chg) >= WINDOW_3MIN_UP:
             arrow = "⚡" if chg >= 0 else "🔻"
             direction = "急漲" if chg >= 0 else "急跌"
             alerts.append({
                 "title": f"{arrow} 3分鐘{direction} ${abs(chg):,.0f}",
-                "body": f"3分鐘前: ${p3:,.2f}\n{price_line}\n變動: {chg:+,.2f}",
+                "body": build_body(p3_binance, binance_price, okx_price, "3分鐘前"),
                 "sound": "alarm", "level": "timeSensitive", "group": "3分鐘波動",
                 "url": kline_url
             })
 
     # 5分鐘：漲跌 $300
-    p5 = find_price_ago(history, 5)
-    if p5 is not None:
-        chg = current_price - p5
+    p5_binance = find_price_ago(history, 5, "binance")
+    if p5_binance is not None:
+        chg = binance_price - p5_binance
         if abs(chg) >= WINDOW_5MIN_CHG:
             arrow = "📈" if chg >= 0 else "📉"
             direction = "急漲" if chg >= 0 else "急跌"
             alerts.append({
                 "title": f"{arrow} 5分鐘{direction} ${abs(chg):,.0f}",
-                "body": f"5分鐘前: ${p5:,.2f}\n{price_line}\n變動: {chg:+,.2f}",
+                "body": build_body(p5_binance, binance_price, okx_price, "5分鐘前"),
                 "sound": "glass", "level": "active", "group": "5分鐘波動",
                 "url": kline_url
             })
 
     # 10分鐘：漲跌 $500
-    p10 = find_price_ago(history, 10)
-    if p10 is not None:
-        chg = current_price - p10
+    p10_binance = find_price_ago(history, 10, "binance")
+    if p10_binance is not None:
+        chg = binance_price - p10_binance
         if abs(chg) >= WINDOW_10MIN_CHG:
             arrow = "🚀" if chg >= 0 else "🔻"
             direction = "大漲" if chg >= 0 else "大跌"
             alerts.append({
                 "title": f"{arrow} 10分鐘{direction} ${abs(chg):,.0f}",
-                "body": f"10分鐘前: ${p10:,.2f}\n{price_line}\n變動: {chg:+,.2f}",
+                "body": build_body(p10_binance, binance_price, okx_price, "10分鐘前"),
                 "sound": "horn", "level": "timeSensitive", "group": "10分鐘波動",
                 "url": kline_url
             })
@@ -218,13 +231,17 @@ def main():
 
     # 短線窗口警報
     kline_url = "https://www.binance.com/zh-TC/trade/BTC_USDT"
-    for alert in check_window_alerts(current_price, history, okx_price):
+    for alert in check_window_alerts(current_price, okx_price, history):
         send_bark(alert["title"], alert["body"],
                   group=alert["group"], sound=alert["sound"], level=alert["level"],
                   url=alert.get("url", kline_url))
 
-    # 更新歷史
-    history.append({"price": current_price, "time": now.isoformat()})
+    # 更新歷史（同時存幣安+歐易）
+    history.append({
+        "binance": current_price,
+        "okx": okx_price,
+        "time": now.isoformat()
+    })
     cutoff = now - timedelta(minutes=MAX_HISTORY_MINUTES)
     history = [h for h in history if datetime.fromisoformat(h["time"]) > cutoff]
     state["price_history"] = history
