@@ -44,7 +44,7 @@ def get_btc_data():
     # 第二順位：歐易 OKX 備援
     try:
         url = "https://www.okx.com/api/v5/market/ticker"
-        params = {"instId": "BTC-USDT"}
+        params = {"instId": "BTC-USDC"}
         resp = requests.get(url, params=params, timeout=15)
         resp.raise_for_status()
         data = resp.json()["data"][0]
