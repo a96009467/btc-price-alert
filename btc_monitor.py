@@ -263,28 +263,6 @@ def main():
         )
         return
 
-    # 整數關卡
-    last_level = state.get("last_level")
-    level_msg, new_level = check_level_break(current_price, last_level)
-    if level_msg:
-        send_bark(f"🎯 {level_msg}", f"目前: ${current_price:,.2f}",
-                  group="關卡突破", sound="horn", url=kline_url)
-    state["last_level"] = new_level
-
-    # 每日簡報
-    today = now.strftime("%Y-%m-%d")
-    if now.hour >= DAILY_REPORT_HOUR and state.get("last_report_date") != today:
-        arrow = "📈" if data["change_24h"] >= 0 else "📉"
-        send_bark(
-            f"{arrow} BTC 日報 {today}",
-            f"目前: ${current_price:,.2f}\n"
-            f"24h 漲跌: {data['change_24h']:+.2f}%\n"
-            f"24h 最高: ${data['high_24h']:,.2f}\n"
-            f"24h 最低: ${data['low_24h']:,.2f}",
-            group="BTC日報", sound="calendar"
-        )
-        state["last_report_date"] = today
-
     # 儲存
     state["last_price"] = current_price
     save_state(state)
