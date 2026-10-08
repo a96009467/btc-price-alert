@@ -106,8 +106,8 @@ def send_ntfy(title, body, tags="bell", url=""):
         return False
 
 
-def send_bark(title, body, group="BTC行情", sound="default", level="active", url=""):
-    """推送訊息到 Bark（保留原有功能）"""
+def send_bark(title, body, group="BTC行情", sound="default", level="active", url="", tags="bell"):
+    """推送訊息到 Bark（保留原有功能），同時推 ntfy"""
     if not BARK_KEY:
         print("[警告] 未設定 BARK_KEY，跳過 Bark 推送")
     else:
@@ -130,8 +130,8 @@ def send_bark(title, body, group="BTC行情", sound="default", level="active", u
         except Exception as e:
             print(f"[Bark錯誤] {e}")
 
-    # 同時推 ntfy
-    send_ntfy(title, body, url=url)
+    # 同時推 ntfy（帶上該警報的 emoji 標籤）
+    send_ntfy(title, body, tags=tags, url=url)
 
 
 def find_price_ago(history, minutes, exchange="binance"):
@@ -267,7 +267,7 @@ def main():
     for alert in check_window_alerts(current_price, okx_price, history):
         send_bark(alert["title"], alert["body"],
                   group=alert["group"], sound=alert["sound"], level=alert["level"],
-                  url=alert.get("url", kline_url))
+                  url=alert.get("url", kline_url), tags=alert.get("tags", "bell"))
 
     # 更新歷史（同時存幣安+歐易）
     history.append({
