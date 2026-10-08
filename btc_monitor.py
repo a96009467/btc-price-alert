@@ -9,6 +9,10 @@ from datetime import datetime, timezone, timedelta
 BARK_KEY = os.environ.get("BARK_KEY", "")
 BARK_SERVER = os.environ.get("BARK_SERVER", "https://api.day.app")
 
+# ntfy 推送（與 Bark 並存）
+NTFY_SERVER = os.environ.get("NTFY_SERVER", "https://ntfy.sh")
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
+
 # 短時間窗口警報（單位：美元）
 WINDOW_3MIN_UP = float(os.environ.get("WINDOW_3MIN_UP", "200"))
 WINDOW_5MIN_CHG = float(os.environ.get("WINDOW_5MIN_CHG", "300"))
@@ -24,7 +28,7 @@ MAX_HISTORY_MINUTES = 15
 
 
 def get_btc_data():
-    """取得 BTC 即時價格，自動備援：幣安 → CoinGecko"""
+    """取得 BTC 即時價格，自動備援：幣安 → 歐易"""
     # 第一順位：幣安公共行情端點
     try:
         url = "https://data-api.binance.vision/api/v3/ticker/24hr"
@@ -39,7 +43,7 @@ def get_btc_data():
             "source": "幣安"
         }
     except Exception as e:
-        print(f"[警告] 幣安接口失敗，切換 CoinGecko: {e}")
+        print(f"[警告] 幣安接口失敗，切換歐易: {e}")
 
     # 第二順位：歐易 OKX 備援
     try:
@@ -78,30 +82,56 @@ def save_state(state):
         json.dump(state, f, ensure_ascii=False, indent=2)
 
 
-def send_bark(title, body, group="BTC行情", sound="default", level="active", url=""):
-    if not BARK_KEY:
-        print("[警告] 未設定 BARK_KEY，跳過推送")
+def send_ntfy(title, body, tags="bell", url=""):
+    """推送訊息到 ntfy（主題名即地址，不需要 Key）"""
+    if not NTFY_TOPIC:
         return False
-    url_path = f"{BARK_SERVER}/{BARK_KEY}/{quote(title)}/{quote(body)}"
-    params = {
-        "group": group,
-        "sound": sound,
-        "level": level,
-        "ttl": 600,
+    headers = {
+        "Title": title,
+        "Tags": tags,
     }
     if url:
-        params["url"] = url
+        headers["Click"] = url  # 點通知直接開啟 K 線圖
     try:
-        resp = requests.get(url_path, params=params, timeout=10)
-        result = resp.json()
-        if result.get("code") == 200:
-            print(f"[推送成功] {title}")
+        resp = requests.post(f"{NTFY_SERVER}/{NTFY_TOPIC}",
+                             data=body.encode("utf-8"),
+                             headers=headers, timeout=10)
+        if resp.status_code == 200:
+            print(f"[ntfy成功] {title}")
             return True
-        print(f"[推送失敗] {result}")
+        print(f"[ntfy失敗] HTTP {resp.status_code}: {resp.text[:200]}")
         return False
     except Exception as e:
-        print(f"[推送錯誤] {e}")
+        print(f"[ntfy錯誤] {e}")
         return False
+
+
+def send_bark(title, body, group="BTC行情", sound="default", level="active", url=""):
+    """推送訊息到 Bark（保留原有功能）"""
+    if not BARK_KEY:
+        print("[警告] 未設定 BARK_KEY，跳過 Bark 推送")
+    else:
+        url_path = f"{BARK_SERVER}/{BARK_KEY}/{quote(title)}/{quote(body)}"
+        params = {
+            "group": group,
+            "sound": sound,
+            "level": level,
+            "ttl": 600,
+        }
+        if url:
+            params["url"] = url
+        try:
+            resp = requests.get(url_path, params=params, timeout=10)
+            result = resp.json()
+            if result.get("code") == 200:
+                print(f"[Bark成功] {title}")
+            else:
+                print(f"[Bark失敗] {result}")
+        except Exception as e:
+            print(f"[Bark錯誤] {e}")
+
+    # 同時推 ntfy
+    send_ntfy(title, body, url=url)
 
 
 def find_price_ago(history, minutes, exchange="binance"):
@@ -155,7 +185,8 @@ def check_window_alerts(binance_price, okx_price, history):
                 "title": f"{arrow} 3分鐘{direction} ${abs(chg):,.0f}",
                 "body": build_body(p3_binance, binance_price, okx_price, "3分鐘前"),
                 "sound": "alarm", "level": "timeSensitive", "group": "3分鐘波動",
-                "url": kline_url
+                "url": kline_url,
+                "tags": "rotating_light"
             })
 
     # 5分鐘：漲跌 $300
@@ -169,7 +200,8 @@ def check_window_alerts(binance_price, okx_price, history):
                 "title": f"{arrow} 5分鐘{direction} ${abs(chg):,.0f}",
                 "body": build_body(p5_binance, binance_price, okx_price, "5分鐘前"),
                 "sound": "glass", "level": "active", "group": "5分鐘波動",
-                "url": kline_url
+                "url": kline_url,
+                "tags": "chart_increasing"
             })
 
     # 10分鐘：漲跌 $500
@@ -183,7 +215,8 @@ def check_window_alerts(binance_price, okx_price, history):
                 "title": f"{arrow} 10分鐘{direction} ${abs(chg):,.0f}",
                 "body": build_body(p10_binance, binance_price, okx_price, "10分鐘前"),
                 "sound": "horn", "level": "timeSensitive", "group": "10分鐘波動",
-                "url": kline_url
+                "url": kline_url,
+                "tags": "rocket"
             })
 
     return alerts
@@ -229,7 +262,7 @@ def main():
     state = load_state()
     history = state.get("price_history", [])
 
-    # 短線窗口警報
+    # 短線窗口警報（Bark + ntfy 同時推）
     kline_url = "https://a96009467.github.io/btc-price-alert/"
     for alert in check_window_alerts(current_price, okx_price, history):
         send_bark(alert["title"], alert["body"],
