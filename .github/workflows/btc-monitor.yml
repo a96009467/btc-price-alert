@@ -1,6 +1,6 @@
 name: BTC 價格監控
 
-# 定时任务：每3分钟运行一次（降低频率，更容易被GitHub调度）
+# 定時任務：每1分鐘運行一次（由 cron-job.org 觸發）
 on:
   schedule:
     - cron: "*/3 * * * *"
@@ -27,6 +27,7 @@ jobs:
       - name: 執行 BTC 價格監控
         env:
           BARK_KEY: ${{ secrets.BARK_KEY }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: python btc_monitor.py
 
       - name: 將最新狀態推回倉庫
