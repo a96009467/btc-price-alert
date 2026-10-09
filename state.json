@@ -58,10 +58,18 @@
     {
       "binance": 81786.23,
       "okx": 81790.0,
+<<<<<<< Updated upstream
       "time": "2026-10-09T08:44:09.812781+08:00"
+=======
+      "time": "2026-10-09T08:44:16.163238+08:00"
+>>>>>>> Stashed changes
     }
   ],
   "last_price": 81786.23,
   "last_level": 81000,
+<<<<<<< Updated upstream
   "updated_at": "2026-10-09T08:44:10.948853+08:00"
+=======
+  "updated_at": "2026-10-09T08:44:17.052692+08:00"
+>>>>>>> Stashed changes
 }
