@@ -13,6 +13,9 @@ BARK_SERVER = os.environ.get("BARK_SERVER", "https://api.day.app")
 NTFY_SERVER = os.environ.get("NTFY_SERVER", "https://ntfy.sh")
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
 
+# Discord 推送（Webhook，與 Bark/ntfy 並存）
+DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK", "")
+
 # 短時間窗口警報（單位：美元）
 WINDOW_3MIN_UP = float(os.environ.get("WINDOW_3MIN_UP", "200"))
 WINDOW_5MIN_CHG = float(os.environ.get("WINDOW_5MIN_CHG", "300"))
@@ -106,8 +109,29 @@ def send_ntfy(title, body, tags="bell", url=""):
         return False
 
 
+def send_discord(title, body, url=""):
+    """推送訊息到 Discord（Webhook）"""
+    if not DISCORD_WEBHOOK:
+        return False
+    text = f"**{title}**\n{body}"
+    if url:
+        text += f"\n\n📊 {url}"
+    try:
+        resp = requests.post(DISCORD_WEBHOOK,
+                             json={"content": text[:2000]},
+                             timeout=10)
+        if resp.status_code == 204:
+            print(f"[Discord成功] {title}")
+            return True
+        print(f"[Discord失敗] HTTP {resp.status_code}: {resp.text[:200]}")
+        return False
+    except Exception as e:
+        print(f"[Discord錯誤] {e}")
+        return False
+
+
 def send_bark(title, body, group="BTC行情", sound="default", level="active", url="", tags="bell"):
-    """推送訊息到 Bark（保留原有功能），同時推 ntfy"""
+    """推送訊息到 Bark（保留原有功能），同時推 ntfy + Discord"""
     if not BARK_KEY:
         print("[警告] 未設定 BARK_KEY，跳過 Bark 推送")
     else:
@@ -132,6 +156,9 @@ def send_bark(title, body, group="BTC行情", sound="default", level="active", u
 
     # 同時推 ntfy（帶上該警報的 emoji 標籤）
     send_ntfy(title, body, tags=tags, url=url)
+
+    # 同時推 Discord
+    send_discord(title, body, url=url)
 
 
 def find_price_ago(history, minutes, exchange="binance"):
