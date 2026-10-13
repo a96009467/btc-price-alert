@@ -202,7 +202,7 @@ def check_window_alerts(binance_price, okx_price, history):
                 lines.append(f"歐易: ${now_okx:,.2f}")
         return "\n".join(lines)
 
-    # 1分鐘：漲跌 $100（鈴聲警報）
+    # 1分鐘：漲跌 $100（鈴聲警報，critical 強制響鈴）
     p1_binance = find_price_ago(history, 1, "binance")
     if p1_binance is not None:
         chg = binance_price - p1_binance
@@ -212,7 +212,7 @@ def check_window_alerts(binance_price, okx_price, history):
             alerts.append({
                 "title": f"{arrow} 1分鐘{direction} ${abs(chg):,.0f}",
                 "body": build_body(p1_binance, binance_price, okx_price, "1分鐘前", okx_minutes=1),
-                "sound": "alarm", "level": "timeSensitive", "group": "1分鐘波動",
+                "sound": "alarm", "level": "critical", "group": "1分鐘波動",
                 "url": kline_url,
                 "tags": "bell"
             })
