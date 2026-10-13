@@ -227,7 +227,7 @@ def check_window_alerts(binance_price, okx_price, history):
             alerts.append({
                 "title": f"{arrow} 3分鐘{direction} ${abs(chg):,.0f}",
                 "body": build_body(p3_binance, binance_price, okx_price, "3分鐘前"),
-                "sound": "alarm", "level": "timeSensitive", "group": "3分鐘波動",
+                "sound": "bell", "level": "critical", "group": "3分鐘波動",
                 "url": kline_url,
                 "tags": "rotating_light"
             })
@@ -242,7 +242,7 @@ def check_window_alerts(binance_price, okx_price, history):
             alerts.append({
                 "title": f"{arrow} 5分鐘{direction} ${abs(chg):,.0f}",
                 "body": build_body(p5_binance, binance_price, okx_price, "5分鐘前"),
-                "sound": "glass", "level": "active", "group": "5分鐘波動",
+                "sound": "glass", "level": "critical", "group": "5分鐘波動",
                 "url": kline_url,
                 "tags": "chart_increasing"
             })
@@ -257,7 +257,7 @@ def check_window_alerts(binance_price, okx_price, history):
             alerts.append({
                 "title": f"{arrow} 10分鐘{direction} ${abs(chg):,.0f}",
                 "body": build_body(p10_binance, binance_price, okx_price, "10分鐘前"),
-                "sound": "horn", "level": "timeSensitive", "group": "10分鐘波動",
+                "sound": "horn", "level": "critical", "group": "10分鐘波動",
                 "url": kline_url,
                 "tags": "rocket"
             })
