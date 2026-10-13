@@ -17,6 +17,7 @@ NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
 DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK", "")
 
 # 短時間窗口警報（單位：美元）
+WINDOW_1MIN_CHG = float(os.environ.get("WINDOW_1MIN_CHG", "100"))
 WINDOW_3MIN_UP = float(os.environ.get("WINDOW_3MIN_UP", "200"))
 WINDOW_5MIN_CHG = float(os.environ.get("WINDOW_5MIN_CHG", "300"))
 WINDOW_10MIN_CHG = float(os.environ.get("WINDOW_10MIN_CHG", "500"))
@@ -187,19 +188,34 @@ def check_window_alerts(binance_price, okx_price, history):
     alerts = []
     kline_url = "https://a96009467.github.io/btc-price-alert/"
 
-    def build_body(past_binance, now_binance, now_okx, past_label):
+    def build_body(past_binance, now_binance, now_okx, past_label, okx_minutes=3):
         """建置通知內容，分別顯示兩交易所變動"""
         bn_chg = now_binance - past_binance
         lines = [f"{past_label}: ${past_binance:,.2f}"]
         lines.append(f"幣安: ${now_binance:,.2f}  ({bn_chg:+,.0f})")
         if now_okx:
-            past_okx = find_price_ago(history, 3, "okx")  # 近似值
+            past_okx = find_price_ago(history, okx_minutes, "okx")  # 近似值
             if past_okx:
                 okx_chg = now_okx - past_okx
                 lines.append(f"歐易: ${now_okx:,.2f}  ({okx_chg:+,.0f})")
             else:
                 lines.append(f"歐易: ${now_okx:,.2f}")
         return "\n".join(lines)
+
+    # 1分鐘：漲跌 $100（鈴聲警報）
+    p1_binance = find_price_ago(history, 1, "binance")
+    if p1_binance is not None:
+        chg = binance_price - p1_binance
+        if abs(chg) >= WINDOW_1MIN_CHG:
+            arrow = "🔔" if chg >= 0 else "🔔"
+            direction = "急漲" if chg >= 0 else "急跌"
+            alerts.append({
+                "title": f"{arrow} 1分鐘{direction} ${abs(chg):,.0f}",
+                "body": build_body(p1_binance, binance_price, okx_price, "1分鐘前", okx_minutes=1),
+                "sound": "alarm", "level": "timeSensitive", "group": "1分鐘波動",
+                "url": kline_url,
+                "tags": "bell"
+            })
 
     # 3分鐘：漲跌 $200（以幣安為基準）
     p3_binance = find_price_ago(history, 3, "binance")
