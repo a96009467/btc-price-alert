@@ -20,6 +20,7 @@ DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK", "")
 WINDOW_1MIN_CHG = float(os.environ.get("WINDOW_1MIN_CHG", "100"))
 WINDOW_3MIN_UP = float(os.environ.get("WINDOW_3MIN_UP", "200"))
 WINDOW_5MIN_CHG = float(os.environ.get("WINDOW_5MIN_CHG", "300"))
+WINDOW_6MIN_CHG = float(os.environ.get("WINDOW_6MIN_CHG", "300"))
 WINDOW_10MIN_CHG = float(os.environ.get("WINDOW_10MIN_CHG", "500"))
 
 # 一般監控配置
@@ -245,6 +246,21 @@ def check_window_alerts(binance_price, okx_price, history):
                 "sound": "glass", "level": "critical", "group": "5分鐘波動",
                 "url": kline_url,
                 "tags": "chart_increasing"
+            })
+
+    # 6分鐘：漲跌 $300（號角鼓號鈴聲）
+    p6_binance = find_price_ago(history, 6, "binance")
+    if p6_binance is not None:
+        chg = binance_price - p6_binance
+        if abs(chg) >= WINDOW_6MIN_CHG:
+            arrow = "🎺" if chg >= 0 else "🎺"
+            direction = "急漲" if chg >= 0 else "急跌"
+            alerts.append({
+                "title": f"{arrow} 6分鐘{direction} ${abs(chg):,.0f}",
+                "body": build_body(p6_binance, binance_price, okx_price, "6分鐘前", okx_minutes=6),
+                "sound": "fanfare", "level": "critical", "group": "6分鐘波動",
+                "url": kline_url,
+                "tags": "trumpet"
             })
 
     # 10分鐘：漲跌 $500
