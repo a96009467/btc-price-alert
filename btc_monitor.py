@@ -1,6 +1,7 @@
 import os
 import json
 import math
+import time
 import requests
 from urllib.parse import quote
 from datetime import datetime, timezone, timedelta
@@ -22,6 +23,10 @@ WINDOW_3MIN_UP = float(os.environ.get("WINDOW_3MIN_UP", "200"))
 WINDOW_5MIN_CHG = float(os.environ.get("WINDOW_5MIN_CHG", "300"))
 WINDOW_6MIN_CHG = float(os.environ.get("WINDOW_6MIN_CHG", "300"))
 WINDOW_10MIN_CHG = float(os.environ.get("WINDOW_10MIN_CHG", "500"))
+# 秒級窗口警報（30秒/120秒）
+WINDOW_30S_CHG_50 = float(os.environ.get("WINDOW_30S_CHG_50", "50"))
+WINDOW_30S_CHG_100 = float(os.environ.get("WINDOW_30S_CHG_100", "100"))
+WINDOW_120S_CHG = float(os.environ.get("WINDOW_120S_CHG", "80"))
 
 # 一般監控配置
 LEVEL_BREAKPOINT = int(os.environ.get("LEVEL_BREAKPOINT", "1000"))
@@ -184,24 +189,90 @@ def find_price_ago(history, minutes, exchange="binance"):
     return best_price
 
 
-def check_window_alerts(binance_price, okx_price, history):
+def find_price_seconds_ago(history, seconds, exchange="binance"):
+    """找 N 秒前最接近的價格（只取目標時刻之前的採樣點，秒級窗口專用）"""
+    if not history:
+        return None
+    now = datetime.now(TZ)
+    target = now - timedelta(seconds=seconds)
+    best_price = None
+    best_diff = timedelta(hours=999)
+    for h in history:
+        if exchange not in h or h[exchange] is None:
+            continue
+        t = datetime.fromisoformat(h["time"])
+        if t > target:
+            continue
+        d = target - t
+        if d < best_diff:
+            best_diff = d
+            best_price = h[exchange]
+    # 採樣間隔 30 秒，容差 60 秒內可接受（最多偏 2 個採樣點）
+    if best_price is None or best_diff > timedelta(seconds=60):
+        return None
+    return best_price
+
+
+def check_window_alerts(binance_price, okx_price, history, first_price=None):
     """短線窗口波動警報，以幣安為主判斷觸發，通知顯示兩邊變動"""
     alerts = []
     kline_url = "https://a96009467.github.io/btc-price-alert/"
 
-    def build_body(past_binance, now_binance, now_okx, past_label, okx_minutes=3):
+    def build_body(past_binance, now_binance, now_okx, past_label, okx_minutes=3, okx_seconds=None):
         """建置通知內容，分別顯示兩交易所變動"""
         bn_chg = now_binance - past_binance
         lines = [f"{past_label}: ${past_binance:,.2f}"]
         lines.append(f"幣安: ${now_binance:,.2f}  ({bn_chg:+,.0f})")
         if now_okx:
-            past_okx = find_price_ago(history, okx_minutes, "okx")  # 近似值
+            if okx_seconds is not None:
+                past_okx = find_price_seconds_ago(history, okx_seconds, "okx")
+            else:
+                past_okx = find_price_ago(history, okx_minutes, "okx")  # 近似值
             if past_okx:
                 okx_chg = now_okx - past_okx
                 lines.append(f"歐易: ${now_okx:,.2f}  ({okx_chg:+,.0f})")
             else:
                 lines.append(f"歐易: ${now_okx:,.2f}")
         return "\n".join(lines)
+
+    # 30秒：漲跌 $50（run 內雙採樣基準，siren 警笛鈴聲）
+    if first_price is not None:
+        chg30 = binance_price - first_price
+        if abs(chg30) >= WINDOW_30S_CHG_50:
+            arrow = "🔔" if chg30 >= 0 else "🔔"
+            direction = "急漲" if chg30 >= 0 else "急跌"
+            alerts.append({
+                "title": f"{arrow} 30秒{direction} ${abs(chg30):,.0f}",
+                "body": build_body(first_price, binance_price, okx_price, "30秒前", okx_minutes=None),
+                "sound": "siren", "level": "critical", "group": "30秒波動",
+                "url": kline_url,
+                "tags": "bell"
+            })
+        if abs(chg30) >= WINDOW_30S_CHG_100:
+            arrow = "🚨" if chg30 >= 0 else "🚨"
+            direction = "急漲" if chg30 >= 0 else "急跌"
+            alerts.append({
+                "title": f"{arrow} 30秒猛{direction} ${abs(chg30):,.0f}",
+                "body": build_body(first_price, binance_price, okx_price, "30秒前", okx_minutes=None),
+                "sound": "pulse", "level": "critical", "group": "30秒劇烈波動",
+                "url": kline_url,
+                "tags": "rotating_light"
+            })
+
+    # 120秒：漲跌 $80（magic 魔法鈴聲）
+    p120_binance = find_price_seconds_ago(history, 120, "binance")
+    if p120_binance is not None:
+        chg120 = binance_price - p120_binance
+        if abs(chg120) >= WINDOW_120S_CHG:
+            arrow = "⚡" if chg120 >= 0 else "🔻"
+            direction = "急漲" if chg120 >= 0 else "急跌"
+            alerts.append({
+                "title": f"{arrow} 120秒{direction} ${abs(chg120):,.0f}",
+                "body": build_body(p120_binance, binance_price, okx_price, "120秒前", okx_seconds=120),
+                "sound": "magic", "level": "critical", "group": "120秒波動",
+                "url": kline_url,
+                "tags": "hourglass"
+            })
 
     # 1分鐘：漲跌 $100（鈴聲警報，critical 強制響鈴）
     p1_binance = find_price_ago(history, 1, "binance")
@@ -310,6 +381,14 @@ def main():
     data = get_btc_data()
     if data is None:
         return
+    first_price = data["price"]
+    print(f"[第一次取價] ${first_price:,.2f} ({data.get('source', '')})")
+
+    # 等待 30 秒後再取一次價（秒級窗口雙採樣基準）
+    time.sleep(30)
+    data = get_btc_data()
+    if data is None:
+        return
     current_price = data["price"]
     print(f"[目前] ${current_price:,.2f} ({data.get('source', '')})")
 
@@ -323,18 +402,23 @@ def main():
 
     # 短線窗口警報（Bark + ntfy 同時推）
     kline_url = "https://a96009467.github.io/btc-price-alert/"
-    for alert in check_window_alerts(current_price, okx_price, history):
+    for alert in check_window_alerts(current_price, okx_price, history, first_price=first_price):
         send_bark(alert["title"], alert["body"],
                   group=alert["group"], sound=alert["sound"], level=alert["level"],
                   url=alert.get("url", kline_url), tags=alert.get("tags", "bell"))
 
-    # 更新歷史（同時存幣安+歐易）
+    # 更新歷史（同時存幣安+歐易，含 30 秒雙採樣點 → 歷史變 30 秒粒度）
+    history.append({
+        "binance": first_price,
+        "okx": None,
+        "time": now.isoformat()
+    })
     history.append({
         "binance": current_price,
         "okx": okx_price,
-        "time": now.isoformat()
+        "time": (now + timedelta(seconds=30)).isoformat()
     })
-    cutoff = now - timedelta(minutes=MAX_HISTORY_MINUTES)
+    cutoff = now + timedelta(seconds=30) - timedelta(minutes=MAX_HISTORY_MINUTES)
     history = [h for h in history if datetime.fromisoformat(h["time"]) > cutoff]
     state["price_history"] = history
 
@@ -348,6 +432,8 @@ def main():
             "✅ BTC監控已啟動",
             f"目前價格: ${current_price:,.2f}\n"
             f"數據來源: {data.get('source', '幣安')}\n"
+            f"30秒波動門檻: ±${WINDOW_30S_CHG_50:.0f} / ±${WINDOW_30S_CHG_100:.0f}\n"
+            f"120秒波動門檻: ±${WINDOW_120S_CHG:.0f}\n"
             f"3分鐘波動門檻: ±${WINDOW_3MIN_UP:.0f}\n"
             f"5分鐘波動門檻: ±${WINDOW_5MIN_CHG:.0f}\n"
             f"10分鐘波動門檻: ±${WINDOW_10MIN_CHG:.0f}",
