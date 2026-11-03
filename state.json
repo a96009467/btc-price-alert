@@ -1,162 +1,17 @@
 {
   "price_history": [
     {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-      "binance": 77667.23,
-=======
-      "binance": 77709.36,
->>>>>>> Stashed changes
-=======
-      "binance": 77700.46,
->>>>>>> Stashed changes
-=======
-      "binance": 77702.64,
->>>>>>> Stashed changes
+      "binance": 77707.48,
       "okx": null,
-      "time": "2026-11-04T04:26:36.030343+08:00"
+      "time": "2026-11-04T04:28:26.183745+08:00"
     },
     {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-      "binance": 77587.36,
-      "okx": 77596.5,
-      "time": "2026-11-04T04:16:53.316786+08:00"
-    },
-    {
-      "binance": 77629.82,
-      "okx": null,
-      "time": "2026-11-04T04:18:30.357727+08:00"
-    },
-    {
-      "binance": 77651.39,
-      "okx": 77647.7,
-      "time": "2026-11-04T04:19:00.357727+08:00"
-=======
-      "binance": 77659.0,
-      "okx": null,
-      "time": "2026-11-04T04:20:58.676308+08:00"
-    },
-    {
-      "binance": 77645.46,
-      "okx": 77643.8,
-      "time": "2026-11-04T04:21:28.676308+08:00"
->>>>>>> Stashed changes
-=======
-      "binance": 77690.37,
-      "okx": null,
-      "time": "2026-11-04T04:23:15.517490+08:00"
-    },
-    {
-      "binance": 77704.56,
-      "okx": 77705.0,
-      "time": "2026-11-04T04:23:45.517490+08:00"
->>>>>>> Stashed changes
-=======
-      "binance": 77690.76,
-      "okx": null,
-      "time": "2026-11-04T04:25:40.059476+08:00"
-    },
-    {
-      "binance": 77725.24,
-      "okx": 77726.4,
-      "time": "2026-11-04T04:26:10.059476+08:00"
->>>>>>> Stashed changes
-=======
-      "binance": 77728.59,
-      "okx": null,
-      "time": "2026-11-04T04:27:33.881889+08:00"
-    },
-    {
-      "binance": 77722.77,
-      "okx": 77716.8,
-      "time": "2026-11-04T04:28:03.881889+08:00"
->>>>>>> Stashed changes
+      "binance": 77703.66,
+      "okx": 77700.2,
+      "time": "2026-11-04T04:28:56.183745+08:00"
     }
   ],
-  "last_price": 77722.77,
+  "last_price": 77703.66,
   "last_level": 77000,
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-  "updated_at": "2026-11-04T04:16:54.770101+08:00"
-=======
-      "binance": 77628.21,
-      "okx": null,
-      "time": "2026-11-04T04:17:31.918393+08:00"
-    },
-    {
-      "binance": 77616.01,
-      "okx": 77612.1,
-      "time": "2026-11-04T04:18:01.918393+08:00"
-    }
-  ],
-  "last_price": 77616.01,
-  "last_level": 77000,
-  "updated_at": "2026-11-04T04:18:03.633510+08:00"
->>>>>>> Stashed changes
-=======
-  "updated_at": "2026-11-04T04:19:02.126147+08:00"
->>>>>>> Stashed changes
-=======
-      "binance": 77651.8,
-      "okx": 77651.1,
-      "time": "2026-11-04T04:20:20.712721+08:00"
-    }
-  ],
-  "last_price": 77651.8,
-  "last_level": 77000,
-  "updated_at": "2026-11-04T04:20:22.640905+08:00"
->>>>>>> Stashed changes
-=======
-  "updated_at": "2026-11-04T04:21:29.807973+08:00"
->>>>>>> Stashed changes
-=======
-      "binance": 77702.13,
-      "okx": 77706.1,
-      "time": "2026-11-04T04:22:28.289337+08:00"
-    }
-  ],
-  "last_price": 77702.13,
-  "last_level": 77000,
-  "updated_at": "2026-11-04T04:22:29.228145+08:00"
->>>>>>> Stashed changes
-=======
-  "updated_at": "2026-11-04T04:23:46.918894+08:00"
->>>>>>> Stashed changes
-=======
-      "binance": 77705.54,
-      "okx": 77707.0,
-      "time": "2026-11-04T04:24:58.871808+08:00"
-    }
-  ],
-  "last_price": 77705.54,
-  "last_level": 77000,
-  "updated_at": "2026-11-04T04:25:00.259705+08:00"
->>>>>>> Stashed changes
-=======
-  "updated_at": "2026-11-04T04:26:11.197083+08:00"
->>>>>>> Stashed changes
-=======
-      "binance": 77718.18,
-      "okx": 77717.2,
-      "time": "2026-11-04T04:27:06.030343+08:00"
-    }
-  ],
-  "last_price": 77718.18,
-  "last_level": 77000,
-  "updated_at": "2026-11-04T04:27:07.655973+08:00"
->>>>>>> Stashed changes
-=======
-  "updated_at": "2026-11-04T04:28:05.454099+08:00"
->>>>>>> Stashed changes
+  "updated_at": "2026-11-04T04:28:57.832678+08:00"
 }
