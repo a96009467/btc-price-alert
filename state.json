@@ -3,6 +3,7 @@
     {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       "binance": 77865.29,
 =======
       "binance": 77875.79,
@@ -36,10 +37,21 @@
       "okx": 77887.3,
       "time": "2026-11-04T05:37:38.069571+08:00"
 >>>>>>> Stashed changes
+=======
+      "binance": 77883.99,
+      "okx": null,
+      "time": "2026-11-04T05:39:07.232399+08:00"
+    },
+    {
+      "binance": 77873.58,
+      "okx": 77886.2,
+      "time": "2026-11-04T05:39:37.232399+08:00"
+>>>>>>> Stashed changes
     }
   ],
-  "last_price": 77881.67,
+  "last_price": 77873.58,
   "last_level": 77000,
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
   "updated_at": "2026-11-04T05:32:59.154066+08:00"
@@ -83,5 +95,8 @@
   "last_price": 77867.82,
   "last_level": 77000,
   "updated_at": "2026-11-04T05:38:36.932278+08:00"
+>>>>>>> Stashed changes
+=======
+  "updated_at": "2026-11-04T05:39:38.806021+08:00"
 >>>>>>> Stashed changes
 }
