@@ -1,6 +1,7 @@
 {
   "price_history": [
     {
+<<<<<<< Updated upstream
       "binance": 65225.78,
       "okx": null,
       "time": "2026-11-17T05:25:39.980369+08:00"
@@ -192,5 +193,20 @@
   "last_price": 65219.29,
   "last_level": 65000,
   "updated_at": "2026-11-17T05:26:11.485220+08:00"
+>>>>>>> Stashed changes
+=======
+      "binance": 65189.65,
+      "okx": null,
+      "time": "2026-11-17T05:26:23.947518+08:00"
+    },
+    {
+      "binance": 65147.98,
+      "okx": 65158.6,
+      "time": "2026-11-17T05:26:53.947518+08:00"
+    }
+  ],
+  "last_price": 65147.98,
+  "last_level": 65000,
+  "updated_at": "2026-11-17T05:26:55.409747+08:00"
 >>>>>>> Stashed changes
 }
