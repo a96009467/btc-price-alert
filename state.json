@@ -4,6 +4,7 @@
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       "binance": 64631.29,
 =======
       "binance": 64648.87,
@@ -57,5 +58,20 @@
 >>>>>>> Stashed changes
 =======
   "updated_at": "2026-11-17T00:43:16.298662+08:00"
+>>>>>>> Stashed changes
+=======
+      "binance": 64543.72,
+      "okx": null,
+      "time": "2026-11-17T00:43:44.740701+08:00"
+    },
+    {
+      "binance": 64555.01,
+      "okx": 64551.0,
+      "time": "2026-11-17T00:44:14.740701+08:00"
+    }
+  ],
+  "last_price": 64555.01,
+  "last_level": 64000,
+  "updated_at": "2026-11-17T00:44:15.695159+08:00"
 >>>>>>> Stashed changes
 }
