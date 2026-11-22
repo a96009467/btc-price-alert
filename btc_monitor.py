@@ -18,17 +18,11 @@ NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
 DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK", "")
 
 # 短時間窗口警報（單位：美元）
-WINDOW_1MIN_CHG = float(os.environ.get("WINDOW_1MIN_CHG", "100"))
 WINDOW_3MIN_UP = float(os.environ.get("WINDOW_3MIN_UP", "200"))
 WINDOW_5MIN_CHG = float(os.environ.get("WINDOW_5MIN_CHG", "300"))
-WINDOW_6MIN_CHG = float(os.environ.get("WINDOW_6MIN_CHG", "300"))
 WINDOW_10MIN_CHG = float(os.environ.get("WINDOW_10MIN_CHG", "500"))
-WINDOW_15MIN_CHG = float(os.environ.get("WINDOW_15MIN_CHG", "400"))
-WINDOW_20MIN_CHG = float(os.environ.get("WINDOW_20MIN_CHG", "500"))
-# 秒級窗口警報（30秒/120秒）
-WINDOW_30S_CHG_50 = float(os.environ.get("WINDOW_30S_CHG_50", "50"))
+# 秒級窗口警報（30秒）
 WINDOW_30S_CHG_100 = float(os.environ.get("WINDOW_30S_CHG_100", "100"))
-WINDOW_120S_CHG = float(os.environ.get("WINDOW_120S_CHG", "80"))
 
 # 一般監控配置
 LEVEL_BREAKPOINT = int(os.environ.get("LEVEL_BREAKPOINT", "1000"))
@@ -36,7 +30,7 @@ DAILY_REPORT_HOUR = int(os.environ.get("DAILY_REPORT_HOUR", "9"))
 
 STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "state.json")
 TZ = timezone(timedelta(hours=8))
-MAX_HISTORY_MINUTES = 25
+MAX_HISTORY_MINUTES = 15
 
 
 def get_btc_data():
@@ -237,19 +231,9 @@ def check_window_alerts(binance_price, okx_price, history, first_price=None):
                 lines.append(f"歐易: ${now_okx:,.2f}")
         return "\n".join(lines)
 
-    # 30秒：漲跌 $50（run 內雙採樣基準，siren 警笛鈴聲）
+    # 30秒：漲跌 $100（run 內雙採樣基準，pulse 鈴聲）
     if first_price is not None:
         chg30 = binance_price - first_price
-        if abs(chg30) >= WINDOW_30S_CHG_50:
-            arrow = "🔔" if chg30 >= 0 else "🔔"
-            direction = "急漲" if chg30 >= 0 else "急跌"
-            alerts.append({
-                "title": f"{arrow} 30秒{direction} ${abs(chg30):,.0f}",
-                "body": build_body(first_price, binance_price, okx_price, "30秒前", okx_minutes=None),
-                "sound": "siren", "level": "critical", "group": "30秒波動",
-                "url": kline_url,
-                "tags": "bell"
-            })
         if abs(chg30) >= WINDOW_30S_CHG_100:
             arrow = "🚨" if chg30 >= 0 else "🚨"
             direction = "急漲" if chg30 >= 0 else "急跌"
@@ -259,36 +243,6 @@ def check_window_alerts(binance_price, okx_price, history, first_price=None):
                 "sound": "pulse", "level": "critical", "group": "30秒劇烈波動",
                 "url": kline_url,
                 "tags": "rotating_light"
-            })
-
-    # 120秒：漲跌 $80（magic 魔法鈴聲）
-    p120_binance = find_price_seconds_ago(history, 120, "binance")
-    if p120_binance is not None:
-        chg120 = binance_price - p120_binance
-        if abs(chg120) >= WINDOW_120S_CHG:
-            arrow = "⚡" if chg120 >= 0 else "🔻"
-            direction = "急漲" if chg120 >= 0 else "急跌"
-            alerts.append({
-                "title": f"{arrow} 120秒{direction} ${abs(chg120):,.0f}",
-                "body": build_body(p120_binance, binance_price, okx_price, "120秒前", okx_seconds=120),
-                "sound": "magic", "level": "critical", "group": "120秒波動",
-                "url": kline_url,
-                "tags": "hourglass"
-            })
-
-    # 1分鐘：漲跌 $100（鈴聲警報，critical 強制響鈴）
-    p1_binance = find_price_ago(history, 1, "binance")
-    if p1_binance is not None:
-        chg = binance_price - p1_binance
-        if abs(chg) >= WINDOW_1MIN_CHG:
-            arrow = "🔔" if chg >= 0 else "🔔"
-            direction = "急漲" if chg >= 0 else "急跌"
-            alerts.append({
-                "title": f"{arrow} 1分鐘{direction} ${abs(chg):,.0f}",
-                "body": build_body(p1_binance, binance_price, okx_price, "1分鐘前", okx_minutes=1),
-                "sound": "alarm", "level": "critical", "group": "1分鐘波動",
-                "url": kline_url,
-                "tags": "bell"
             })
 
     # 3分鐘：漲跌 $200（以幣安為基準）
@@ -321,21 +275,6 @@ def check_window_alerts(binance_price, okx_price, history, first_price=None):
                 "tags": "chart_increasing"
             })
 
-    # 6分鐘：漲跌 $300（號角鼓號鈴聲）
-    p6_binance = find_price_ago(history, 6, "binance")
-    if p6_binance is not None:
-        chg = binance_price - p6_binance
-        if abs(chg) >= WINDOW_6MIN_CHG:
-            arrow = "🎺" if chg >= 0 else "🎺"
-            direction = "急漲" if chg >= 0 else "急跌"
-            alerts.append({
-                "title": f"{arrow} 6分鐘{direction} ${abs(chg):,.0f}",
-                "body": build_body(p6_binance, binance_price, okx_price, "6分鐘前", okx_minutes=6),
-                "sound": "fanfare", "level": "critical", "group": "6分鐘波動",
-                "url": kline_url,
-                "tags": "trumpet"
-            })
-
     # 10分鐘：漲跌 $500
     p10_binance = find_price_ago(history, 10, "binance")
     if p10_binance is not None:
@@ -349,36 +288,6 @@ def check_window_alerts(binance_price, okx_price, history, first_price=None):
                 "sound": "horn", "level": "critical", "group": "10分鐘波動",
                 "url": kline_url,
                 "tags": "rocket"
-            })
-
-    # 15分鐘：漲跌 $400（小號 trumpet 鈴聲）
-    p15_binance = find_price_ago(history, 15, "binance")
-    if p15_binance is not None:
-        chg = binance_price - p15_binance
-        if abs(chg) >= WINDOW_15MIN_CHG:
-            arrow = "📊" if chg >= 0 else "📉"
-            direction = "大漲" if chg >= 0 else "大跌"
-            alerts.append({
-                "title": f"{arrow} 15分鐘{direction} ${abs(chg):,.0f}",
-                "body": build_body(p15_binance, binance_price, okx_price, "15分鐘前"),
-                "sound": "trumpet", "level": "critical", "group": "15分鐘波動",
-                "url": kline_url,
-                "tags": "chart_with_downwards_trend"
-            })
-
-    # 20分鐘：漲跌 $500（木琴 xylophone 鈴聲）
-    p20_binance = find_price_ago(history, 20, "binance")
-    if p20_binance is not None:
-        chg = binance_price - p20_binance
-        if abs(chg) >= WINDOW_20MIN_CHG:
-            arrow = "🛰️" if chg >= 0 else "🔻"
-            direction = "大漲" if chg >= 0 else "大跌"
-            alerts.append({
-                "title": f"{arrow} 20分鐘{direction} ${abs(chg):,.0f}",
-                "body": build_body(p20_binance, binance_price, okx_price, "20分鐘前"),
-                "sound": "xylophone", "level": "critical", "group": "20分鐘波動",
-                "url": kline_url,
-                "tags": "chart_with_downwards_trend"
             })
 
     return alerts
@@ -464,13 +373,10 @@ def main():
             "✅ BTC監控已啟動",
             f"目前價格: ${current_price:,.2f}\n"
             f"數據來源: {data.get('source', '幣安')}\n"
-            f"30秒波動門檻: ±${WINDOW_30S_CHG_50:.0f} / ±${WINDOW_30S_CHG_100:.0f}\n"
-            f"120秒波動門檻: ±${WINDOW_120S_CHG:.0f}\n"
+            f"30秒波動門檻: ±${WINDOW_30S_CHG_100:.0f}\n"
             f"3分鐘波動門檻: ±${WINDOW_3MIN_UP:.0f}\n"
             f"5分鐘波動門檻: ±${WINDOW_5MIN_CHG:.0f}\n"
-            f"10分鐘波動門檻: ±${WINDOW_10MIN_CHG:.0f}\n"
-            f"15分鐘波動門檻: ±${WINDOW_15MIN_CHG:.0f}\n"
-            f"20分鐘波動門檻: ±${WINDOW_20MIN_CHG:.0f}",
+            f"10分鐘波動門檻: ±${WINDOW_10MIN_CHG:.0f}",
             url=kline_url
         )
         return
