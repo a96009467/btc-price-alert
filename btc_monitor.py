@@ -89,19 +89,20 @@ def save_state(state):
 
 
 def send_ntfy(title, body, tags="bell", url=""):
-    """推送訊息到 ntfy（主題名即地址，不需要 Key）"""
+    """推送訊息到 ntfy（用 JSON 發布，UTF-8 標題不會被 HTTP header latin-1 限制卡住）"""
     if not NTFY_TOPIC:
         return False
-    headers = {
-        "Title": title,
-        "Tags": tags,
+    payload = {
+        "topic": NTFY_TOPIC,
+        "title": title,
+        "message": body,
+        "tags": [t.strip() for t in tags.split(",") if t.strip()],
+        "priority": 5,  # max 優先級，對應 critical
     }
     if url:
-        headers["Click"] = url  # 點通知直接開啟 K 線圖
+        payload["click"] = url  # 點通知直接開啟 K 線圖
     try:
-        resp = requests.post(f"{NTFY_SERVER}/{NTFY_TOPIC}",
-                             data=body.encode("utf-8"),
-                             headers=headers, timeout=10)
+        resp = requests.post(f"{NTFY_SERVER}/", json=payload, timeout=10)
         if resp.status_code == 200:
             print(f"[ntfy成功] {title}")
             return True
