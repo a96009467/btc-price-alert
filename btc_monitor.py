@@ -20,7 +20,9 @@ DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK", "")
 # 短時間窗口警報（單位：美元）
 WINDOW_3MIN_UP = float(os.environ.get("WINDOW_3MIN_UP", "200"))
 WINDOW_5MIN_CHG = float(os.environ.get("WINDOW_5MIN_CHG", "300"))
+WINDOW_5MIN_CHG_500 = float(os.environ.get("WINDOW_5MIN_CHG_500", "500"))
 WINDOW_10MIN_CHG = float(os.environ.get("WINDOW_10MIN_CHG", "500"))
+WINDOW_15MIN_CHG = float(os.environ.get("WINDOW_15MIN_CHG", "1000"))
 # 秒級窗口警報（30秒）
 WINDOW_30S_CHG_100 = float(os.environ.get("WINDOW_30S_CHG_100", "100"))
 
@@ -30,7 +32,7 @@ DAILY_REPORT_HOUR = int(os.environ.get("DAILY_REPORT_HOUR", "9"))
 
 STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "state.json")
 TZ = timezone(timedelta(hours=8))
-MAX_HISTORY_MINUTES = 15
+MAX_HISTORY_MINUTES = 20
 
 
 def get_btc_data():
@@ -261,7 +263,7 @@ def check_window_alerts(binance_price, okx_price, history, first_price=None):
                 "tags": "rotating_light"
             })
 
-    # 5分鐘：漲跌 $300
+    # 5分鐘：漲跌 $300（glass 鈴聲）
     p5_binance = find_price_ago(history, 5, "binance")
     if p5_binance is not None:
         chg = binance_price - p5_binance
@@ -274,6 +276,17 @@ def check_window_alerts(binance_price, okx_price, history, first_price=None):
                 "sound": "glass", "level": "critical", "group": "5分鐘波動",
                 "url": kline_url,
                 "tags": "chart_increasing"
+            })
+        # 5分鐘：漲跌 $500（siren 鈴聲，更劇烈）
+        if abs(chg) >= WINDOW_5MIN_CHG_500:
+            arrow = "🚨" if chg >= 0 else "🚨"
+            direction = "猛漲" if chg >= 0 else "猛跌"
+            alerts.append({
+                "title": f"{arrow} 5分鐘{direction} ${abs(chg):,.0f}",
+                "body": build_body(p5_binance, binance_price, okx_price, "5分鐘前"),
+                "sound": "siren", "level": "critical", "group": "5分鐘劇烈波動",
+                "url": kline_url,
+                "tags": "rotating_light"
             })
 
     # 10分鐘：漲跌 $500
@@ -289,6 +302,21 @@ def check_window_alerts(binance_price, okx_price, history, first_price=None):
                 "sound": "horn", "level": "critical", "group": "10分鐘波動",
                 "url": kline_url,
                 "tags": "rocket"
+            })
+
+    # 15分鐘：漲跌 $1000（小號 trumpet 鈴聲）
+    p15_binance = find_price_ago(history, 15, "binance")
+    if p15_binance is not None:
+        chg = binance_price - p15_binance
+        if abs(chg) >= WINDOW_15MIN_CHG:
+            arrow = "🔥" if chg >= 0 else "🧊"
+            direction = "大漲" if chg >= 0 else "大跌"
+            alerts.append({
+                "title": f"{arrow} 15分鐘{direction} ${abs(chg):,.0f}",
+                "body": build_body(p15_binance, binance_price, okx_price, "15分鐘前"),
+                "sound": "trumpet", "level": "critical", "group": "15分鐘波動",
+                "url": kline_url,
+                "tags": "fire"
             })
 
     return alerts
@@ -376,8 +404,9 @@ def main():
             f"數據來源: {data.get('source', '幣安')}\n"
             f"30秒波動門檻: ±${WINDOW_30S_CHG_100:.0f}\n"
             f"3分鐘波動門檻: ±${WINDOW_3MIN_UP:.0f}\n"
-            f"5分鐘波動門檻: ±${WINDOW_5MIN_CHG:.0f}\n"
-            f"10分鐘波動門檻: ±${WINDOW_10MIN_CHG:.0f}",
+            f"5分鐘波動門檻: ±${WINDOW_5MIN_CHG:.0f} / ±${WINDOW_5MIN_CHG_500:.0f}\n"
+            f"10分鐘波動門檻: ±${WINDOW_10MIN_CHG:.0f}\n"
+            f"15分鐘波動門檻: ±${WINDOW_15MIN_CHG:.0f}",
             url=kline_url
         )
         return
