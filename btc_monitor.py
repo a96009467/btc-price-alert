@@ -25,6 +25,7 @@ WINDOW_10MIN_CHG = float(os.environ.get("WINDOW_10MIN_CHG", "500"))
 WINDOW_15MIN_CHG = float(os.environ.get("WINDOW_15MIN_CHG", "1000"))
 # 秒級窗口警報（30秒）
 WINDOW_30S_CHG_100 = float(os.environ.get("WINDOW_30S_CHG_100", "100"))
+WINDOW_1MIN_CHG = float(os.environ.get("WINDOW_1MIN_CHG", "100"))
 
 # 一般監控配置
 LEVEL_BREAKPOINT = int(os.environ.get("LEVEL_BREAKPOINT", "1000"))
@@ -242,10 +243,25 @@ def check_window_alerts(binance_price, okx_price, history, first_price=None):
             direction = "急漲" if chg30 >= 0 else "急跌"
             alerts.append({
                 "title": f"{arrow} 30秒猛{direction} ${abs(chg30):,.0f}",
-                "body": build_body(first_price, binance_price, okx_price, "30秒前", okx_minutes=None),
+                "body": build_body(first_price, binance_price, okx_price, "30秒前", okx_seconds=30),
                 "sound": "pulse", "level": "critical", "group": "30秒劇烈波動",
                 "url": kline_url,
                 "tags": "rotating_light"
+            })
+
+    # 1分鐘：漲跌 $100（以幣安 60 秒前採樣為基準，chime 鈴聲）
+    p1_binance = find_price_seconds_ago(history, 60, "binance")
+    if p1_binance is not None:
+        chg1 = binance_price - p1_binance
+        if abs(chg1) >= WINDOW_1MIN_CHG:
+            arrow = "🔔" if chg1 >= 0 else "🔔"
+            direction = "急漲" if chg1 >= 0 else "急跌"
+            alerts.append({
+                "title": f"{arrow} 1分鐘{direction} ${abs(chg1):,.0f}",
+                "body": build_body(p1_binance, binance_price, okx_price, "1分鐘前", okx_seconds=60),
+                "sound": "chime", "level": "critical", "group": "1分鐘波動",
+                "url": kline_url,
+                "tags": "alarm_clock"
             })
 
     # 3分鐘：漲跌 $200（以幣安為基準）
@@ -403,6 +419,7 @@ def main():
             f"目前價格: ${current_price:,.2f}\n"
             f"數據來源: {data.get('source', '幣安')}\n"
             f"30秒波動門檻: ±${WINDOW_30S_CHG_100:.0f}\n"
+            f"1分鐘波動門檻: ±${WINDOW_1MIN_CHG:.0f}\n"
             f"3分鐘波動門檻: ±${WINDOW_3MIN_UP:.0f}\n"
             f"5分鐘波動門檻: ±${WINDOW_5MIN_CHG:.0f} / ±${WINDOW_5MIN_CHG_500:.0f}\n"
             f"10分鐘波動門檻: ±${WINDOW_10MIN_CHG:.0f}\n"
